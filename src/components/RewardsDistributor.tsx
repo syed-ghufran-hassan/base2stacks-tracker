@@ -17,9 +17,9 @@ const contractName = 'b2s-rewards-distributor';
 
 export default function RewardsDistributor() {
   const { address, isConnected } = useWallet();
-  const [stakedAmount, setStakedAmount] = useState(0);
-  const [pendingRewards, setPendingRewards] = useState(0);
-  const [totalEarned, setTotalEarned] = useState(0);
+  const [stakedAmount, setStakedAmount] = useState(120);
+  const [pendingRewards, setPendingRewards] = useState(1.25);
+  const [totalEarned, setTotalEarned] = useState(42.8);
   const [stakeInput, setStakeInput] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,38 +29,71 @@ export default function RewardsDistributor() {
     }
   }, [address, isConnected]);
 
+  // Simulate fetching data (no hard reset)
   const fetchStakerInfo = async () => {
     if (!address) return;
-    setStakedAmount(0);
-    setTotalEarned(0);
-    setPendingRewards(0);
+
+    setStakedAmount((prev) => prev || 120);
+    setPendingRewards((prev) => prev || 1.25);
+    setTotalEarned((prev) => prev || 42.8);
+  };
+
+  // Simulate reward growth over time
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const interval = setInterval(() => {
+      setPendingRewards((prev) => {
+        if (stakedAmount === 0) return prev;
+        return prev + stakedAmount * 0.00002;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isConnected, stakedAmount]);
+
+  // Fake transaction handler
+  const simulateTx = async (callback?: () => void) => {
+    try {
+      setLoading(true);
+      await new Promise((res) => setTimeout(res, 1200));
+      callback?.();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStake = async () => {
     if (!address || !stakeInput) return;
+
     const amount = parseFloat(stakeInput);
-    if (amount <= 0) {
-      alert('Please enter a valid amount');
-      return;
-    }
-    alert('Staking feature coming soon!');
-    setStakeInput('');
+    if (!amount || amount <= 0) return;
+
+    await simulateTx(() => {
+      setStakedAmount((prev) => prev + amount);
+      setStakeInput('');
+    });
   };
 
   const handleClaimRewards = async () => {
-    if (!address) return;
-    alert('Claim rewards feature coming soon!');
+    if (!address || pendingRewards <= 0) return;
+
+    await simulateTx(() => {
+      setTotalEarned((prev) => prev + pendingRewards);
+      setPendingRewards(0);
+    });
   };
 
   const handleUnstake = async () => {
     if (!address || !stakeInput) return;
+
     const amount = parseFloat(stakeInput);
-    if (amount <= 0 || amount > stakedAmount) {
-      alert('Invalid unstake amount');
-      return;
-    }
-    alert('Unstake feature coming soon!');
-    setStakeInput('');
+    if (!amount || amount > stakedAmount) return;
+
+    await simulateTx(() => {
+      setStakedAmount((prev) => prev - amount);
+      setStakeInput('');
+    });
   };
 
   if (!isConnected) {
@@ -84,6 +117,11 @@ export default function RewardsDistributor() {
         <div className="stat-card pending bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-md rounded-xl p-6 border border-green-500/30">
           <h3 className="text-white/70 text-sm mb-2">Pending Rewards</h3>
           <p className="amount text-3xl font-bold text-green-400">{pendingRewards.toFixed(6)} $B2S</p>
+
+          <p className="text-xs text-white/50 mt-2">
+            ~{(pendingRewards * 0.85).toFixed(4)} $B2S after fees
+          </p>
+
           <button 
             onClick={handleClaimRewards}
             disabled={loading || pendingRewards === 0}
@@ -117,7 +155,7 @@ export default function RewardsDistributor() {
         <div className="button-group grid grid-cols-2 gap-4">
           <button 
             onClick={handleStake}
-            disabled={loading || !stakeInput}
+            disabled={loading || !stakeInput || parseFloat(stakeInput) <= 0}
             className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold transition-all"
           >
             {loading ? 'Processing...' : 'Stake'}
@@ -125,7 +163,7 @@ export default function RewardsDistributor() {
           
           <button 
             onClick={handleUnstake}
-            disabled={loading || !stakeInput}
+            disabled={loading || !stakeInput || parseFloat(stakeInput) <= 0}
             className="bg-white/10 hover:bg-white/20 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-semibold border border-white/20 transition-all"
           >
             {loading ? 'Processing...' : 'Unstake'}
